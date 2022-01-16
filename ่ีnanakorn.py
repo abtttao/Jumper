@@ -1,0 +1,132 @@
+import pygame
+from pygame import mouse
+from pygame.locals import *
+import pyganim
+
+pygame.init()
+clock = pygame.time.Clock()
+fps = 30
+
+# ------------ game variables ----------
+screen_width = 800
+screen_height = 400
+snail_x = 600
+player_vspeed = 0
+game_over = False
+score_check = False
+score = 0
+snail_speed = 5
+
+# ------------ game setting ------------
+screen = pygame.display.set_mode((screen_width, screen_height))
+pygame.display.set_caption('Jumper')
+
+# ------------ font ----------
+game_font = pygame.font.Font('font/Pixeltype.ttf', 50)
+
+# ------------ images ----------
+sky_img = pygame.image.load('graphics/Sky2.jpg').convert()
+sky_img_height = sky_img.get_height()
+ground_img = pygame.image.load('graphics/ground.png').convert()
+snail_img = pygame.image.load('graphics/snail/snail1.png').convert_alpha()
+player_img = pygame.image.load('graphics/Player/player_walk_1.png').convert_alpha()
+player_rect = player_img.get_rect(midbottom = (120, sky_img_height))
+snail_rect = snail_img.get_rect(bottomright = (snail_x, sky_img_height))
+player_jump = pygame.image.load('graphics/Player/jump.png').convert_alpha()
+
+# --- palyer animation ---
+player_set = []
+for i in range(2):
+    player_set.append((f'graphics/Player/player_walk_{i+1}.png', 200))
+
+player_anim = pyganim.PygAnimation(player_set)
+player_anim.play()
+player_height = player_anim.getRect().height
+player_width = player_anim.getRect().width
+
+# --- snail animation ---
+snail_set = []
+for i in range(2):
+    snail_set.append((f'graphics/snail/snail{i+1}.png', 200))
+
+snail_anim = pyganim.PygAnimation(
+    snail_set
+)
+snail_anim.play()
+snail_height = snail_anim.getRect().height
+snail_width = snail_anim.getRect().width
+
+
+# ------------ sound ----------
+player_jump_sound = pygame.mixer.Sound('audio/ok.mp3')
+player_jump_sound.set_volume(0.3)
+bg_music = pygame.mixer.Sound('audio/next.mp3')
+bg_music.play(loops = -1)
+bg_music.set_volume(0.1)
+lose_music = pygame.mixer.Sound('audio/cry.mp3')
+
+
+# ============ Game Start ==============
+run = True
+while run:
+
+    # frame rate
+    clock.tick(fps)
+    # clear screen and draw background image
+    screen.blit(sky_img, (0, 0))
+    screen.blit(ground_img, (0, sky_img_height))
+    # or fill with color
+    # screen.fill((255,255,255))
+
+    game_text = game_font.render('Your Score: '+ str(score), False, 'Black')
+    game_text_rect = game_text.get_rect(center =(400,50))
+    screen.blit(game_text, game_text_rect)
+    
+    snail_anim.blit(screen, snail_rect)
+    snail_rect.x -= snail_speed
+
+    if snail_rect.x < 0 and score_check == False:
+        score += 1
+        snail_speed =snail_speed+ 1
+        score_check = True
+
+    if snail_rect.right <= 0:
+        score_check=False
+        snail_rect.left = 800
+
+    player_anim.blit(screen, player_rect)
+    player_rect.y += player_vspeed
+    player_vspeed += 1
+
+    # fall only if not on ground
+    if player_rect.bottom >= sky_img_height:
+        # make speed to zero
+        player_vspeed = 0
+        # reset the ground position
+        player_rect.bottom = sky_img_height
+    
+    # collision check
+    if player_rect.colliderect(snail_rect):
+        snail_rect.x = 120
+        snail_anim.pause()
+        player_anim.pause()
+        game_over = True
+        lose_music.play()
+
+    # restart game
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            run = False
+        elif event.type == pygame.KEYDOWN:
+            # exit game by ESC key
+            if event.key == pygame.K_ESCAPE:
+                run = False
+            elif event.key == pygame.K_SPACE and player_rect.bottom >= sky_img_height:
+                # print('jump')
+                if game_over == False:
+                    player_vspeed -= 20
+                    player_jump_sound.play()
+                
+    pygame.display.update()
+
+pygame.quit()
